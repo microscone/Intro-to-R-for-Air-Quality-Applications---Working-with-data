@@ -1,0 +1,662 @@
+---
+title: "Webinar 2: Introduction to R for Air Quality Applications - Working with Data"
+author: "MARAMA Training Webinar, presented by Shane Cone, @Microscone"
+date: "12/12/2019"
+output:
+  slidy_presentation:
+    font_adjustment: +4
+---
+
+# Welcome to Intro to R - Webinar 2!
+
+![](MARAMA_Logo.png)
+
+## Topic: Data manipulation
+
+- In this webinar, we will be talking about how to manipulate data in R.
+- The goal is for this webinar to equip you to import, rearrange, and then DO THINGS with your data!
+
+
+
+
+
+
+# Motivation
+
+- Do you find yourself doing the same manual Excel transformations time and again?
+- Do you want to be able to extract, transform, and load (ETL) big data? (Here, big data means too big for Excel, so >1,048,576 rows and/or >16,384 columns)
+- Do you want to make REALLY AWESOME data visualizations in R?
+
+**Then this webinar is for you!!!**
+
+
+
+
+
+
+
+
+
+
+# Remember, first step is to define your libraries!
+
+- The first step is to define your libraries.
+- In this example, we load the "tidyverse" library. The tidyverse includes a number of packages, which you will see when you load it.
+- Read more about it here: https://www.tidyverse.org/ - I use this website as a reference *often*!
+
+# Load Library
+
+```{R}
+library(tidyverse)
+library(lubridate)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Let's get some data!
+
+- Next, we import our data. 
+- Have file saved in the same folder as this file!
+  -*Just a note about this dataset: We collapsed the triple column headers to simplify the R code.*
+- Here, we are using "read_csv()", which is part of the **readr** package.
+
+- We name the file, we tell the function what to convert to "na", and we tell it to skip the empty two rows at the top of the file. 
+```{r, collapse=TRUE}
+Monitoring_data <- read_csv("Copy of Hourly Monitoring Data for R_Simplified.csv", na = c("NoData", "<Samp", "Down"), skip = 2)
+
+# ?read_csv #use this code to ask R what this function is! 
+```
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- Next, to make sure we have what we think we do, we used str() to view the structure of the dataframe.
+
+```{r}
+##Hide results of this chunk for PPT presentation, but NOT for pdf/html
+str(Monitoring_data)
+
+# Remember the Pipe operator? The above command is the same as below:
+Monitoring_data %>% 
+  str()
+
+#Another great way to view your data is View(). This is how you are probably used to looking at data if you mostly use Excel. It will open the full dataset in a separate tab in the RStudio IDE. 
+View(Monitoring_data)
+
+##We want students to see this output below, and to understand what R is trying to tell them. 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Dplyr to select data
+
+- We only want to work with the Ozone data, so let's only keep those columns!
+
+```{r}
+Monitoring_Ozone <- Monitoring_data %>% 
+  select(c(1:7, 11, 13))  # Explain this
+
+str(Monitoring_Ozone)
+View(Monitoring_Ozone)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Dealing with Times
+
+
+-Remember we saw that our "Date" variable was parsed as a character? Let's fix that!
+
+```{r}
+#combine colunms to create timestamp, using Lubridate
+library(lubridate)
+str(Monitoring_Ozone)
+#first, we convert the character data type into a date data type
+Monitoring_Ozone$Date <- mdy(Monitoring_Ozone$Date) 
+
+#The function above turns the character data into date data, using the calendar format that you give it. In this case, our input data was month-day-year, so we use "mdy"
+
+str(Monitoring_Ozone) #see? It worked!
+```
+
+
+
+
+
+
+
+
+# Now, we combine the Date and Time columns into a new column, where it will have a single datetime
+
+```{r}
+Monitoring_Ozone <- Monitoring_Ozone %>% 
+  mutate(Timestamp = as_datetime(paste(Monitoring_Ozone$Date, Monitoring_Ozone$Time))) #talk again about how to select columns
+
+#examine the structure of the dataset. What class is "Timestamp"?
+str(Monitoring_Ozone)
+View(Monitoring_Ozone)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Time to Tidy
+
+## TidyTime
+
+- So now we have our CSV data in an R dataframe. So now we need to make it tidy!
+
+## What is Tidy Data?
+
+"Happy families are all alike; every
+unhappy family is unhappy in its own
+way" - Leo Tolstoy
+
+First, we must discuss "Data Semantics"
+(From Wickhams Tidy Data paper)
+
+"A Dataset is a collection of **values**... Every value belongs to a variable and an observation. 
+
+- Variable - all measurements of the same underlying attribute (e.g. height, weight, temperature, etc.)
+- Observation - all values measured on the same unit (e.g. person, day, etc.)
+
+
+
+
+
+
+
+
+---
+
+## What is Tidy Data? (pt. 2)
+
+1. Each variable forms a column.
+2. Each observation forms a row.
+3. Each type of observational unit forms a table
+
+
+## What makes the dataset NOT tidy?
+
+- If you work with data on a daily basis, I **highly** recommend that you read chapter 12 of R for Data Science - Hadley Wickham and his publication on Tidy Data
+  - R for Data Science: https://r4ds.had.co.nz/tidy-data.html
+  - Tidy Data Publication: https://vita.had.co.nz/papers/tidy-data.pdf
+---
+- take a look at the head of the data. You'll see that Ozone measurements at different sites are spread out across multiple columns. This means that one row contains multiple observations! Tidy data would have the location as one variable, and the ozone measurement as another. So, let's pivot longer!
+
+```{r}
+head(Monitoring_Ozone, 5)
+```
+
+
+
+
+
+
+
+# Longer vs Wider data
+
+- Longer data is almost always easier to work with during analysis. 
+
+
+## Note for future Use
+- Something to note: pivot_longer() is coming! gather() will still be around and work, but will no longer be updated. However, currently, gather() is still what is used in the tidyverse
+
+--- 
+```{r}
+
+Monitoring_long <-  gather(Monitoring_Ozone,"Measure", "Ozone", 3:9)
+View(Monitoring_long)
+```
+
+# Example of pivot_longer()
+
+```{r}
+#don't Run 
+#Monitoring_long_2 <- pivot_longer(-c(date, time), names_to = "Measure", values_to = "Ozone")
+
+```
+
+
+
+
+
+
+
+
+# let's clean up our dataset a bit
+- We use the Dplyr verb "select", and the -ColName to remove the Date and Time columns, leaving only our needed three columns.
+
+```{r}
+Monitoring_long <-  Monitoring_long %>% 
+  select(-Date, -Time)
+View(Monitoring_long)
+```
+
+
+# Let's Visualize!
+## Take a quick view of your data
+```{r fig.dim = c(15, 10)}
+ggplot(Monitoring_long, aes(x = Timestamp, y = Ozone, color = Measure)) +
+  geom_line() +
+  theme_classic()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+# Dplyr
+
+---  
+
+- Throughout this presentation we have been using some verbs to help transform our data. Now, we will go a little more in depth to understand these verbs, what they do, and how to use them.
+
+# Dplyr - What is it?
+
+- Dplyr is, "a grammar of data manipulation, providing a consistent set of verbs that help you solve the most common data manipulation challenges" - https://dplyr.tidyverse.org/
+- Basically, Dplyr is a set of verbs that give you the power to manipulate and manage your data. It also is a loose "system" of how to write code to manage data (using the Dpyr verbs, along with the "%>%" pipe operator)
+
+
+# Dplyr Verbs
+
+- Mutate()
+- select()
+- filter()
+- summarise() or summarize()
+- arrange()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Mutate()
+
+- mutate() adds a new variable that are is a function of existing variables
+- In Excel, this is equivalent to adding a new column, and the data for that column is a formula based off of data in other columns
+
+# Mutate() Excel
+
+---
+
+![](Dplyr ex_Mutate.gif)
+
+
+also found here (https://media.giphy.com/media/KAdwNPfTvsIfh8Wfr4/source.gif)
+
+# mutate()
+- mutate() is like manually adding a column, naming it, and defining its values with a formula
+
+
+
+
+# mutate() in R
+
+- this is the tool you will use to add columns. You can save the new column to your dataframe, or this created column can just be used in a calculation. 
+- we did it earlier in the example, when we pasted together the time and date fields to create a new column, Timestamp
+
+```{r}
+Monitoring_long2 <- Monitoring_Ozone %>% 
+  mutate("Timestamp" = as_datetime(paste(Monitoring_Ozone$Date, Monitoring_Ozone$Time)))
+
+```
+
+
+
+
+
+
+
+
+
+
+# select()
+- picks variables based on their names
+- This is like deleting columns in Excel (only much handier, because you can reorder columns!)
+
+# select() in Excel
+
+---
+
+![](Dplyr ex_Select.gif)
+
+also found here (https://media.giphy.com/media/ZBVRe4nS7ZPHi8BaWL/source.gif)
+
+
+
+# select() in R
+
+- We also used this function in the prior examples. We dropped the non-ozone variables
+- In this example, we chose *not* to select Date and Time by putting the "-" in front of them. We could have instead selected the variables we want to keep (read more about subsetting!)
+
+```{r}
+Monitoring_long2 <-  Monitoring_long2 %>% 
+  select(-Date, -Time)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# filter()
+
+- filter is like in excel, when you add a filter. Except, this doesn't just "hide" the data, but rather only selects the data you specify
+- filter is also more powerful in R because you can filter on several columns at once
+
+
+# filter() in Excel
+
+---
+
+![](Dplyr ex_Filter.gif)
+
+also found here (https://media.giphy.com/media/hRyKQvSrAGiVe8eTX3/source.gif)
+
+
+
+# filter() in R
+- We did not use this in our example, but it is a common function.
+- For instance, say you have a dataset, and you only care about observations above a certain threshold (See Ex Below)
+- There are endless combinations using Boolean operators
+
+```{r}
+Monitoring_long %>% 
+  filter(Ozone > 0.070)
+
+#or, if you only want to see observations at a station that are greater than 70ppb...
+
+Monitoring_long %>% 
+  filter(Measure == "Seaford Ozone ppm" & Ozone > 0.070)
+
+```
+
+
+
+
+
+
+
+
+
+
+# arrange()
+- arrange() is similar to using a filter in Excel. Once you have your data filtered, you can rearrange the rows in the data. 
+
+# arrange() in Excel
+
+---
+
+![](Dplyr ex_Arrange.gif)
+
+Also found here: (https://media.giphy.com/media/Ss0vgFAdlg5JWIemMD/source.gif)
+
+
+
+
+
+# arrange() in R
+
+- Like using a filter in Excel, arrange allows you to rearrange your rows based on the conditions you give it
+- I often use this in combination with "head()" to see my top values of a certain column
+- For example, in our dataset, what were the highest readings for ozone?
+
+```{r}
+View(Monitoring_long)
+Monitoring_long %>% 
+  arrange(desc(Ozone))
+  
+#How about seeing, specifically, the top 5 values?
+Monitoring_long %>% 
+  arrange(desc(Ozone)) %>% 
+  head(5)
+
+#or
+
+head(arrange(Monitoring_long, desc(Ozone)), 5)
+#note above: now that we're writing longer expressions, the pipe operator really starts to shine!
+```
+
+
+
+
+
+
+
+# summarize()
+
+- Summarize is where you can get really powerful calculations on your data. With summarize, you are performing calculations by group of data. If you are doing analysis on your data, this is the tool to use. We will only cover the basics, but more reading and practice with this function will take you far!
+
+
+# summarize() in Excel
+
+- In Excel, the equivalent would be performing a one-off calculation. Or, possibly, pivoting, or adding a subtotal. 
+
+![](Dplyr ex_summarize_average.gif)
+
+Also found here: (https://media.giphy.com/media/YN7Rn3fdL00XIrmzGP/source.gif)
+
+
+
+
+# summarize() in R
+
+- Let's use summarize to look at some averages
+- You could calculate the average ozone value for the whole dataset with the following:
+
+```{r}
+Monitoring_long %>% 
+  summarize(Average = mean(Ozone, na.rm = T))
+
+#R is a statistical program, and makes you do some thinking. Try the above without the na.rm... what do you get? Why? Be sure to read "?mean()"
+```
+
+
+
+
+
+
+---
+
+
+
+
+
+
+
+- What if I wanted to just see averages based on the station?
+
+```{r}
+Monitoring_long %>% 
+  group_by(Measure) %>% 
+  summarise(Average = mean(Ozone, na.rm = T))
+
+```
+
+
+
+
+
+
+
+---
+
+
+
+
+
+
+
+
+- And now, what if I wanted to see the daily average?
+
+```{r}
+Monitoring_long %>%
+  mutate(date_col = date(Timestamp)) %>%
+  group_by(date_col) %>%
+  summarize(DailyAvg = round(mean(Ozone, na.rm = T), 4))
+
+#we had to re-create the day column in this example, using the "date()" function
+```
+
+
+
+
+
+
+---
+
+
+
+
+
+What about  average ozone by day by station??
+
+```{r}
+Monitoring_long %>%
+  mutate(date_col = date(Timestamp)) %>%
+  group_by(date_col, Measure) %>%
+  summarize(DailyAvg = round(mean(Ozone, na.rm = T), 4))
+
+#we had to re-create the day column in this example, using the "date()" function
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Recap
+
+- We walked through an example of how to take a dataset, clean it up, make it tidy, and visualize it. 
+- This may have seemed like a lot for your first go, but look how little work it really was?
+- If you got data in the same format, next time, the *only thing you would have to change is the input file name*
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+
+Monitoring_data <- read_csv("Copy of Hourly Monitoring Data for R_Simplified.csv", na = c("NoData", "<Samp", "Down"), skip = 2)
+Monitoring_Ozone <- Monitoring_data %>% 
+  select(c(1:7, 11, 13)) 
+Monitoring_Ozone$Date <- mdy(Monitoring_Ozone$Date)
+Monitoring_Ozone <-  Monitoring_Ozone %>% 
+  mutate(Timestamp = as_datetime(paste(Monitoring_Ozone$Date, Monitoring_Ozone$Time))) %>% 
+  select(-Date, -Time)
+Monitoring_long <-  gather(Monitoring_Ozone,"Measure", "Ozone", 1:7)
+ggplot(Monitoring_long, aes(x = Timestamp, y = Ozone, color = Measure)) +
+  geom_line() +
+  theme_classic()
+```
+
+
