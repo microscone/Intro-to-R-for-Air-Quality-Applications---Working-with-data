@@ -1,7 +1,7 @@
 ---
 title: "Webinar 2: Introduction to R for Air Quality Applications - Working with Data"
 author: "MARAMA Training Webinar, presented by Shane Cone, @Microscone"
-date: "12/12/2019"
+date: "04/09/2019"
 output:
   slidy_presentation:
     font_adjustment: +4
