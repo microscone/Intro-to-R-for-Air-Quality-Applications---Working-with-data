@@ -272,20 +272,19 @@ head(Monitoring_Ozone, 5)
 
 
 ## Note for future Use
-- Something to note: pivot_longer() is coming! gather() will still be around and work, but will no longer be updated. However, currently, gather() is still what is used in the tidyverse
+- Something to note: pivot_longer() is here! gather() will still be around and work, but will no longer be updated. However, the switch happened recently (~start of 2020), so you may see "gather" elsewhere.
 
 --- 
 ```{r}
-
-Monitoring_long <-  gather(Monitoring_Ozone,"Measure", "Ozone", 3:9)
-View(Monitoring_long)
+# example of gather
+# Monitoring_long <-  gather(Monitoring_Ozone,"Measure", "Ozone", 3:9)
+# View(Monitoring_long)
 ```
 
 # Example of pivot_longer()
 
 ```{r}
-#don't Run 
-#Monitoring_long_2 <- pivot_longer(-c(date, time), names_to = "Measure", values_to = "Ozone")
+Monitoring_long <-pivot_longer(Monitoring_Ozone, c(-Date, -Time, -Timestamp),names_to = "Measure", values_to = "Ozone")
 
 ```
 
@@ -306,9 +305,15 @@ View(Monitoring_long)
 ```
 
 
+
+
+
+
+
 # Let's Visualize!
 ## Take a quick view of your data
-```{r fig.dim = c(15, 10)}
+
+```{r, fig.width= 9}
 ggplot(Monitoring_long, aes(x = Timestamp, y = Ozone, color = Measure)) +
   geom_line() +
   theme_classic()
@@ -339,7 +344,7 @@ ggplot(Monitoring_long, aes(x = Timestamp, y = Ozone, color = Measure)) +
 
 # Dplyr Verbs
 
-- Mutate()
+- mutate()
 - select()
 - filter()
 - summarise() or summarize()
@@ -362,7 +367,7 @@ ggplot(Monitoring_long, aes(x = Timestamp, y = Ozone, color = Measure)) +
 
 # Mutate()
 
-- mutate() adds a new variable that are is a function of existing variables
+- mutate() adds a new variable that is a function of existing variables
 - In Excel, this is equivalent to adding a new column, and the data for that column is a formula based off of data in other columns
 
 # Mutate() Excel
@@ -455,6 +460,8 @@ also found here (https://media.giphy.com/media/hRyKQvSrAGiVe8eTX3/source.gif)
 
 
 
+
+
 # filter() in R
 - We did not use this in our example, but it is a common function.
 - For instance, say you have a dataset, and you only care about observations above a certain threshold (See Ex Below)
@@ -468,6 +475,11 @@ Monitoring_long %>%
 
 Monitoring_long %>% 
   filter(Measure == "Seaford Ozone ppm" & Ozone > 0.070)
+
+#or, if you only wanted to see observations on 06-27 thru 06-28
+
+Monitoring_long %>% 
+  filter(Timestamp >= as_datetime("2019-06-27 00:00:00") & Timestamp < as_datetime("2019-06-29 00:00:00"))
 
 ```
 
@@ -502,7 +514,6 @@ Also found here: (https://media.giphy.com/media/Ss0vgFAdlg5JWIemMD/source.gif)
 - For example, in our dataset, what were the highest readings for ozone?
 
 ```{r}
-View(Monitoring_long)
 Monitoring_long %>% 
   arrange(desc(Ozone))
   
@@ -516,6 +527,7 @@ Monitoring_long %>%
 head(arrange(Monitoring_long, desc(Ozone)), 5)
 #note above: now that we're writing longer expressions, the pipe operator really starts to shine!
 ```
+
 
 
 
@@ -571,6 +583,12 @@ Monitoring_long %>%
   group_by(Measure) %>% 
   summarise(Average = mean(Ozone, na.rm = T))
 
+#add arrange to see top averages
+
+Monitoring_long %>% 
+  group_by(Measure) %>% 
+  summarise(Average = mean(Ozone, na.rm = T)) %>% 
+  arrange(desc(Average))
 ```
 
 
@@ -594,9 +612,10 @@ Monitoring_long %>%
 Monitoring_long %>%
   mutate(date_col = date(Timestamp)) %>%
   group_by(date_col) %>%
-  summarize(DailyAvg = round(mean(Ozone, na.rm = T), 4))
+  summarize(DailyAvg = round(mean(Ozone, na.rm = T), 3))
 
 #we had to re-create the day column in this example, using the "date()" function
+#this is an example where you can mutate to create a column, but that new column doesn't get saved anywhere
 ```
 
 
@@ -641,7 +660,7 @@ Monitoring_long %>%
 - If you got data in the same format, next time, the *only thing you would have to change is the input file name*
 ---
 
-```{r}
+```{r, fig.width=9}
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
